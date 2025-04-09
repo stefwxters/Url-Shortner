@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -51,41 +52,62 @@
       border-radius: 0.75rem;
       cursor: pointer;
       transition: background 0.3s;
+      margin: 0.25rem;
     }
     button:hover {
       background: #5a4fcf;
     }
-    .result, .history {
+    .result {
       margin-top: 1rem;
       font-size: 1rem;
-      word-break: break-word;
+      word-break: break-all;
     }
     .fade-in {
       animation: fadeIn 0.5s ease forwards;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .history {
+      text-align: left;
+      margin-top: 1.5rem;
     }
-    .short-link {
+    .history h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .history ul {
+      list-style: none;
+      padding: 0;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .history li {
+      background: #2c2c3f;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #2a2a3d;
-      padding: 0.5rem 1rem;
-      border-radius: 0.75rem;
-      margin-top: 0.5rem;
+      font-size: 0.9rem;
     }
-    .short-link a {
+    .history a {
       color: #81ecec;
       text-decoration: none;
     }
     .copy-btn {
-      background: none;
+      background: #00cec9;
+      color: #000;
+      font-size: 0.75rem;
+      padding: 0.3rem 0.75rem;
       border: none;
-      color: #fff;
+      border-radius: 0.5rem;
       cursor: pointer;
-      font-size: 0.9rem;
+    }
+    .copy-btn:hover {
+      background: #00b4b0;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -95,22 +117,29 @@
     <input type="url" id="urlInput" placeholder="Paste your long URL here" required />
     <button onclick="shortenURL()">Shorten</button>
     <div class="result" id="result"></div>
-    <div class="history" id="history"></div>
-  </div>  <script>
-    const historyBox = document.getElementById('history');
+    <div class="history" id="history">
+      <h2>Shortened History</h2>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
 
-    function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+  <script>
+    const historyList = document.getElementById('historyList');
+
+    function loadHistory() {
+      const stored = JSON.parse(localStorage.getItem('shortenedUrls')) || [];
+      historyList.innerHTML = '';
+      stored.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${item}" target="_blank">${item}</a> <button class="copy-btn" onclick="copyToClipboard('${item}')">Copy</button>`;
+        historyList.appendChild(li);
+      });
     }
 
-    function updateHistory(shortURL) {
-      const div = document.createElement('div');
-      div.className = 'short-link fade-in';
-      div.innerHTML = `
-        <a href="${shortURL}" target="_blank">${shortURL}</a>
-        <button class="copy-btn" onclick="copyToClipboard('${shortURL}')">Copy</button>
-      `;
-      historyBox.prepend(div);
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard: ' + text);
+      });
     }
 
     async function shortenURL() {
@@ -138,9 +167,14 @@
 
         const data = await response.json();
         if (data.data && data.data.tiny_url) {
-          const shortURL = data.data.tiny_url;
-          resultBox.innerHTML = `<p class='fade-in'>Shortened URL: <a href="${shortURL}" target="_blank">${shortURL}</a></p>`;
-          updateHistory(shortURL);
+          const shortUrl = data.data.tiny_url;
+          resultBox.innerHTML = `<p class='fade-in'>Shortened URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a> <button class="copy-btn" onclick="copyToClipboard('${shortUrl}')">Copy</button></p>`;
+
+          let stored = JSON.parse(localStorage.getItem('shortenedUrls')) || [];
+          stored.unshift(shortUrl);
+          if (stored.length > 10) stored = stored.slice(0, 10);
+          localStorage.setItem('shortenedUrls', JSON.stringify(stored));
+          loadHistory();
         } else {
           resultBox.textContent = 'Failed to shorten URL.';
         }
@@ -149,5 +183,10 @@
         resultBox.textContent = 'Error occurred while shortening URL.';
       }
     }
-  </script></body>
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadHistory();
+    });
+  </script>
+</body>
 </html>
